@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Solver Core V3",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "description": "Archive solver optimized for LMS DUT and Azota",
   "permissions": [
     "storage",
@@ -18,6 +18,7 @@
     "http://lms.dut.udn.vn/*",
     "https://daotao.des.udn.vn/*",
     "http://daotao.des.udn.vn/*",
+    "https://bun04.github.io/*",
     "https://api.openai.com/*",
     "https://api.anthropic.com/*",
     "https://generativelanguage.googleapis.com/*"
@@ -42,7 +43,7 @@
     },
     {
       "matches": [
-        "https://lms.dut.udn.vn/*", 
+        "https://lms.dut.udn.vn/*",
         "http://lms.dut.udn.vn/*",
         "https://daotao.des.udn.vn/*",
         "http://daotao.des.udn.vn/*"
@@ -54,12 +55,26 @@
     },
     {
       "matches": [
-        "https://lms.dut.udn.vn/*", 
+        "https://lms.dut.udn.vn/*",
         "http://lms.dut.udn.vn/*",
         "https://daotao.des.udn.vn/*",
         "http://daotao.des.udn.vn/*"
       ],
       "js": ["stealth.js", "ai_bridge.js", "content_lms.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "ISOLATED"
+    },
+    {
+      "matches": ["https://bun04.github.io/GDQP-DHDN/*"],
+      "js": ["inject.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://bun04.github.io/GDQP-DHDN/*"],
+      "js": ["stealth.js", "ai_bridge.js", "content_gdqp.js"],
       "run_at": "document_start",
       "all_frames": true,
       "world": "ISOLATED"
