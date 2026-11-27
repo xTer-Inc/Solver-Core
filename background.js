@@ -21,5 +21,8 @@ const rules = BLOCK_PATTERNS.map(function (p, i) {
 });
 
 chrome.runtime.onInstalled.addListener(function () {
-  chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: rules.map(r => r.id), addRules: rules });
+  chrome.declarativeNetRequest.updateDynamicRules({
+    removeRuleIds: rules.map(r => r.id),
+    addRules: rules
+  });
 });
