@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <style>
-  body { width: 320px; font-family: 'Consolas', monospace; background: #0a0a0a; color: #00ffcc; padding: 15px; margin: 0; border: 2px solid #00ffcc; box-sizing: border-box; }
+  body { width: 340px; font-family: 'Consolas', monospace; background: #0a0a0a; color: #00ffcc; padding: 15px; margin: 0; border: 2px solid #00ffcc; box-sizing: border-box; }
   h3 { margin: 0 0 15px; font-size: 16px; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 0 5px #00ffcc; text-align: center;}
   label { display: block; font-size: 12px; margin: 10px 0 5px; color: #88a; }
   input, select { width: 100%; box-sizing: border-box; background: #111; border: 1px solid #00ffcc; color: #00ffcc; padding: 8px; border-radius: 3px; font-size: 13px; outline: none; }
@@ -16,11 +16,84 @@
   .status { font-size: 12px; margin-top: 10px; padding: 8px; border-radius: 3px; text-align: center; display: none;}
   .ok { border: 1px solid #0f0; color: #0f0; background: #001a00; }
   .err { border: 1px solid #f00; color: #f00; background: #1a0000; }
+  .version { font-size: 10px; color: #666; text-align: center; margin-top: 8px; }
+
+  /* ---- Domain toggle section ---- */
+  .domain-section {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid #333;
+  }
+  .domain-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #111;
+    border: 1px solid #00ffcc;
+    border-radius: 3px;
+    padding: 6px 8px;
+    margin-top: 6px;
+    font-size: 12px;
+  }
+  .domain-row .host { color: #00ffcc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 34px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider-sw {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #444;
+    transition: .3s;
+    border-radius: 18px;
+  }
+  .slider-sw:before {
+    position: absolute;
+    content: "";
+    height: 12px; width: 12px;
+    left: 3px; bottom: 3px;
+    background-color: #fff;
+    transition: .3s;
+    border-radius: 50%;
+  }
+  .switch input:checked + .slider-sw { background-color: #00ffcc; }
+  .switch input:checked + .slider-sw:before { transform: translateX(16px); }
+
+  .domain-list {
+    max-height: 120px;
+    overflow-y: auto;
+    margin-top: 8px;
+  }
+  .domain-list .empty { color: #555; font-size: 11px; text-align: center; padding: 8px; font-style: italic; }
+  .remove-btn {
+    background: transparent;
+    color: #f66;
+    border: 1px solid #f66;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 10px;
+    padding: 2px 6px;
+    margin-left: 6px;
+  }
+  .remove-btn:hover { background: #f66; color: #000; }
+  .hint { font-size: 10px; color: #666; margin-top: 6px; line-height: 1.4; }
+  .section-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #00ffcc;
+    margin-bottom: 4px;
+  }
 </style>
 </head>
 <body>
-  <h3>Solver Core V3</h3>
-  
+  <h3>Solver Core</h3>
+
   <label>API Provider</label>
   <select id="provider">
     <option value="gemini">Google Gemini</option>
@@ -32,18 +105,18 @@
   <input id="apiKey" type="password" placeholder="Nhập API Key...">
 
   <label>Model (Tự động nhập)</label>
-  <input id="model" type="text" placeholder="VD: gemini-3.1-flash-lite...">
+  <input id="model" type="text" placeholder="VD: gemini-2.5-flash-lite...">
 
   <label style="margin-top: 15px; border-top: 1px solid #333; padding-top: 10px;">Chờ chọn đáp án (Giây)</label>
   <div class="slider-container">
-    <input type="range" id="answerDelay" min="5" max="60" step="1" value="15">
-    <span class="range-val" id="answerVal">15s</span>
+    <input type="range" id="answerDelay" min="1" max="30" step="1" value="3">
+    <span class="range-val" id="answerVal">3s</span>
   </div>
 
   <label>Chờ chuyển câu - Next (Giây)</label>
   <div class="slider-container">
-    <input type="range" id="nextDelay" min="5" max="60" step="1" value="60">
-    <span class="range-val" id="nextVal">60s</span>
+    <input type="range" id="nextDelay" min="5" max="120" step="1" value="15">
+    <span class="range-val" id="nextVal">15s</span>
   </div>
 
   <button class="btn" id="testBtn" style="background: #333; color: #00ffcc; border: 1px solid #00ffcc;">TEST KẾT NỐI</button>
@@ -51,6 +124,26 @@
 
   <button class="btn" id="save">LƯU CẤU HÌNH</button>
 
+  <!-- ============ DOMAIN TOGGLE SECTION ============ -->
+  <div class="domain-section">
+    <div class="section-title">⚙ Trạng thái trên trang hiện tại</div>
+    <div class="domain-row">
+      <span class="host" id="currentHost">...</span>
+      <label class="switch">
+        <input type="checkbox" id="currentDomainToggle" checked>
+        <span class="slider-sw"></span>
+      </label>
+    </div>
+    <div class="hint">Tắt = extension không chạy trên trang này. Mặc định BẬT trên mọi website.</div>
+
+    <div class="section-title" style="margin-top: 12px;">🚫 Danh sách trang đã tắt</div>
+    <div class="domain-list" id="disabledList">
+      <div class="empty">Chưa có trang nào bị tắt</div>
+    </div>
+    <div class="hint">Trang bị tắt sẽ nằm trong danh sách này. Bạn có thể bật lại bằng cách gạt công tắc ở trên hoặc xóa khỏi danh sách.</div>
+  </div>
+
+  <div class="version">v3.4.0 · Universal Auto Solver</div>
   <script src="popup.js"></script>
 </body>
 </html>
