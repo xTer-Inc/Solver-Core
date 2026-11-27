@@ -157,3 +157,147 @@
         seenSignatures.add(sig);
 
         const isMulti = root.querySelectorAll('input[type="checkbox"]').length >= 2
+          || /chọn\s*(nhiều|tất cả)|multiple|select all|chọn các/i.test(qText);
+
+        questions.push({ root, qText, choices, isMulti });
+      }
+      return questions;
+    }
+
+    function clickChoice(choice) {
+      const inp = choice.input;
+      const type = (inp.type || '').toLowerCase();
+
+      if (type === 'radio') {
+        if (!inp.checked) {
+          try { inp.click(); } catch (e) { /* ignore */ }
+        }
+      } else if (type === 'checkbox') {
+        if (!inp.checked) {
+          try { inp.click(); } catch (e) { /* ignore */ }
+        }
+      } else {
+        try { inp.click(); } catch (e) { /* ignore */ }
+      }
+
+      if (!inp.checked) {
+        inp.checked = true;
+        inp.dispatchEvent(new Event('input', { bubbles: true }));
+        inp.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      if (choice.holder && choice.holder !== inp) {
+        try { choice.holder.click(); } catch (e) { /* ignore */ }
+      }
+    }
+
+    function clearGroup(root) {
+      root.querySelectorAll('input[type="radio"]').forEach(inp => {
+        if (inp.checked) {
+          inp.checked = false;
+          inp.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      });
+    }
+
+    function findNextButton() {
+      const candidates = document.querySelectorAll(
+        'button, a, input[type="button"], input[type="submit"], [role="button"]'
+      );
+      const patterns = [
+        /tiếp\s*theo/i, /câu\s*tiếp/i, /next/i, /\bsau\b/i, /continue/i,
+        /kết\s*thúc/i, /hoàn\s*thành/i, /\bsubmit\b/i, /\bnộp\b/i, /done/i, /finish/i
+      ];
+      for (const b of candidates) {
+        if (b.disabled || !isVisible(b)) continue;
+        const t = norm(b.innerText || b.textContent || b.value || '');
+        if (!t) continue;
+        if (patterns.some(re => re.test(t))) return b;
+      }
+      return null;
+    }
+
+    async function solveQuestion(q, answerWait) {
+      let indices;
+      try {
+        indices = await AIProviders.ask(q.qText, q.choices.map(c => c.text), q.isMulti);
+      } catch (e) {
+        console.error(LOG, 'AI error:', e);
+        return false;
+      }
+      if (!Array.isArray(indices) || indices.length === 0) {
+        console.warn(LOG, 'AI returned no answer');
+        return false;
+      }
+
+      if (!q.isMulti) {
+        clearGroup(q.root);
+        const idx = indices[0];
+        if (idx >= 0 && idx < q.choices.length) clickChoice(q.choices[idx]);
+      } else {
+        indices.forEach(idx => {
+          if (idx >= 0 && idx < q.choices.length) clickChoice(q.choices[idx]);
+        });
+      }
+
+      await new Promise(r => setTimeout(r, Math.max(300, answerWait)));
+      return true;
+    }
+
+    async function run() {
+      if (busy) return;
+      busy = true;
+      try {
+        const cfg = await chrome.storage.sync.get(['delays']);
+        const ANSWER_WAIT = cfg.delays ? Math.min(cfg.delays.answer, 6000) : 3000;
+        const NEXT_WAIT = cfg.delays ? cfg.delays.next : 60000;
+
+        const questions = collectQuestions();
+        if (questions.length === 0) return;
+
+        const pageSig = questions.map(q => q.qText).join('§');
+        if (pageSig === lastSignature) return;
+
+        let allOk = true;
+        for (const q of questions) {
+          const ok = await solveQuestion(q, ANSWER_WAIT);
+          if (!ok) allOk = false;
+        }
+        lastSignature = pageSig;
+
+        if (!autoAdvance || !allOk) return;
+
+        const allRadioGroups = new Set();
+        document.querySelectorAll('input[type="radio"]').forEach(i => { if (i.name) allRadioGroups.add(i.name); });
+        let unanswered = 0;
+        allRadioGroups.forEach(name => {
+          const group = document.querySelectorAll('input[type="radio"][name="' + CSS.escape(name) + '"]');
+          const anyChecked = Array.from(group).some(i => i.checked);
+          if (!anyChecked) unanswered++;
+        });
+        if (unanswered > 0) {
+          console.warn(LOG, 'Skip Next: ' + unanswered + ' unanswered radio group(s)');
+          return;
+        }
+
+        await new Promise(r => setTimeout(r, NEXT_WAIT));
+        const nextBtn = findNextButton();
+        if (nextBtn) {
+          nextBtn.click();
+          nextBtn.dispatchEvent(new Event('click', { bubbles: true }));
+        }
+      } catch (e) {
+        console.error(LOG, e);
+      } finally {
+        busy = false;
+      }
+    }
+
+    const mo = new MutationObserver(() => { run(); });
+    mo.observe(document.documentElement || document.body, { childList: true, subtree: true });
+
+    setTimeout(run, 2500);
+    setTimeout(run, 5000);
+    setInterval(run, 6000);
+  }
+})();
