@@ -40,7 +40,7 @@ const AIProviders = {
   async ask(question, choices, isMulti = false) {
     const cfg = await chrome.storage.sync.get(['provider', 'apiKey', 'model']);
     if (!cfg.apiKey) throw new Error('Chua cau hinh API key');
-    
+
     const list = choices.map(function (c, i) { return i + '. ' + c; }).join('\n');
     const prompt = isMulti
       ? 'Chon TAT CA dap an dung. CHI tra ve JSON: {"answers":[<cac index dung>]}.\nCau hoi: ' + question + '\nDap an:\n' + list
@@ -54,7 +54,7 @@ const AIProviders = {
 
     const m = raw.match(/\{[\s\S]*\}/);
     const parsed = JSON.parse(m ? m[0] : raw);
-    
+
     if (parsed.answers) return parsed.answers;
     if (typeof parsed.index === 'number') return [parsed.index];
     throw new Error('AI tra ve sai format');
