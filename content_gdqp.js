@@ -1,7 +1,6 @@
 (function () {
   'use strict';
 
-  // ---- Domain whitelist/blacklist check ----
   chrome.storage.sync.get(['disabledDomains'], function (cfg) {
     var list = cfg.disabledDomains || [];
     var host = location.hostname;
