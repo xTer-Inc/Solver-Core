@@ -18,77 +18,21 @@
   .err { border: 1px solid #f00; color: #f00; background: #1a0000; }
   .version { font-size: 10px; color: #666; text-align: center; margin-top: 8px; }
 
-  /* ---- Domain toggle section ---- */
-  .domain-section {
-    margin-top: 15px;
-    padding-top: 10px;
-    border-top: 1px solid #333;
-  }
-  .domain-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #111;
-    border: 1px solid #00ffcc;
-    border-radius: 3px;
-    padding: 6px 8px;
-    margin-top: 6px;
-    font-size: 12px;
-  }
+  .domain-section { margin-top: 15px; padding-top: 10px; border-top: 1px solid #333; }
+  .domain-row { display: flex; align-items: center; justify-content: space-between; background: #111; border: 1px solid #00ffcc; border-radius: 3px; padding: 6px 8px; margin-top: 6px; font-size: 12px; }
   .domain-row .host { color: #00ffcc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
-  .switch {
-    position: relative;
-    display: inline-block;
-    width: 34px;
-    height: 18px;
-    flex-shrink: 0;
-  }
+  .switch { position: relative; display: inline-block; width: 34px; height: 18px; flex-shrink: 0; }
   .switch input { opacity: 0; width: 0; height: 0; }
-  .slider-sw {
-    position: absolute;
-    cursor: pointer;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-color: #444;
-    transition: .3s;
-    border-radius: 18px;
-  }
-  .slider-sw:before {
-    position: absolute;
-    content: "";
-    height: 12px; width: 12px;
-    left: 3px; bottom: 3px;
-    background-color: #fff;
-    transition: .3s;
-    border-radius: 50%;
-  }
+  .slider-sw { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .3s; border-radius: 18px; }
+  .slider-sw:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: #fff; transition: .3s; border-radius: 50%; }
   .switch input:checked + .slider-sw { background-color: #00ffcc; }
   .switch input:checked + .slider-sw:before { transform: translateX(16px); }
-
-  .domain-list {
-    max-height: 120px;
-    overflow-y: auto;
-    margin-top: 8px;
-  }
+  .domain-list { max-height: 120px; overflow-y: auto; margin-top: 8px; }
   .domain-list .empty { color: #555; font-size: 11px; text-align: center; padding: 8px; font-style: italic; }
-  .remove-btn {
-    background: transparent;
-    color: #f66;
-    border: 1px solid #f66;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 10px;
-    padding: 2px 6px;
-    margin-left: 6px;
-  }
+  .remove-btn { background: transparent; color: #f66; border: 1px solid #f66; border-radius: 3px; cursor: pointer; font-size: 10px; padding: 2px 6px; margin-left: 6px; }
   .remove-btn:hover { background: #f66; color: #000; }
   .hint { font-size: 10px; color: #666; margin-top: 6px; line-height: 1.4; }
-  .section-title {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: #00ffcc;
-    margin-bottom: 4px;
-  }
+  .section-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #00ffcc; margin-bottom: 4px; }
 </style>
 </head>
 <body>
@@ -124,7 +68,6 @@
 
   <button class="btn" id="save">LƯU CẤU HÌNH</button>
 
-  <!-- ============ DOMAIN TOGGLE SECTION ============ -->
   <div class="domain-section">
     <div class="section-title">⚙ Trạng thái trên trang hiện tại</div>
     <div class="domain-row">
@@ -140,10 +83,9 @@
     <div class="domain-list" id="disabledList">
       <div class="empty">Chưa có trang nào bị tắt</div>
     </div>
-    <div class="hint">Trang bị tắt sẽ nằm trong danh sách này. Bạn có thể bật lại bằng cách gạt công tắc ở trên hoặc xóa khỏi danh sách.</div>
   </div>
 
-  <div class="version">v3.4.0 · Universal Auto Solver</div>
+  <div class="version">v3.4.1 · Universal Auto Solver</div>
   <script src="popup.js"></script>
 </body>
 </html>
