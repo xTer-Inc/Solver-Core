@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Solver Core",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "description": "Universal AI auto-solver for LMS DUT, LMS DES UDN, GDQP, Azota and any quiz website.",
   "permissions": [
     "storage",
