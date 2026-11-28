@@ -1,117 +1,113 @@
+/**
+ * Solver Core v3.4.1 — LMS DUT / LMS DES UDN
+ * Xử lý Moodle quiz: .que, .qtext, .answer .r0/.r1, .state.
+ */
 (function () {
-  // ---- Domain whitelist/blacklist check ----
-  chrome.storage.sync.get(['disabledDomains'], function (cfg) {
-    var list = cfg.disabledDomains || [];
-    var host = location.hostname;
-    if (list.indexOf(host) !== -1) {
-      console.log('[Solver] Disabled on', host);
-      return;
-    }
-    startSolver();
-  });
+  'use strict';
+  const LOG = '[Solver:lms]';
 
-  function startSolver() {
-    async function solvePage() {
-      const questions = document.querySelectorAll('.que');
-      if (questions.length === 0) return;
+  function isDisabled(host, cb) {
+    chrome.storage.sync.get(['disabledDomains'], function (cfg) {
+      const list = cfg.disabledDomains || [];
+      cb(list.indexOf(host) !== -1);
+    });
+  }
 
-      const cfg = await chrome.storage.sync.get(['delays']);
-      const ANSWER_WAIT = cfg.delays ? cfg.delays.answer : 15000;
-      const NEXT_WAIT = cfg.delays ? cfg.delays.next : 60000;
+  async function getDelays() {
+    const cfg = await chrome.storage.sync.get(['delays']);
+    return {
+      answer: cfg.delays ? cfg.delays.answer : 15000,
+      next: cfg.delays ? cfg.delays.next : 60000
+    };
+  }
 
-      const qDataList = [];
+  function collectQuestions() {
+    const out = [];
+    document.querySelectorAll('.que').forEach(root => {
+      const qText = root.querySelector('.qtext')?.innerText.trim();
+      if (!qText) return;
 
-      questions.forEach((root) => {
-        const qText = root.querySelector('.qtext')?.innerText.trim();
-        if (!qText) return;
+      const state = root.querySelector('.state')?.innerText.trim() || '';
+      const isReview = ['Correct', 'Incorrect', 'Đúng', 'Sai'].includes(state);
+      if (isReview && (state.includes('Correct') || state.includes('Đúng'))) return;
 
-        const state = root.querySelector('.state')?.innerText.trim() || '';
-        const isReview = state === 'Correct' || state === 'Incorrect' || state === 'Đúng' || state === 'Sai';
-
-        if (isReview && (state.includes('Correct') || state.includes('Đúng'))) return;
-
-        const choices = [];
-        const answerBlocks = root.querySelectorAll('.answer .r0, .answer .r1');
-
-        answerBlocks.forEach((block) => {
-          const input = block.querySelector('input[type="radio"], input[type="checkbox"]');
-          const text = block.querySelector('.flex-fill')?.innerText.trim() || block.innerText.trim();
-          choices.push({ text, input });
-        });
-
-        const isMulti = root.querySelectorAll('input[type="checkbox"]').length >= 2;
-        qDataList.push({ root, qText, choices, isMulti, isReview });
+      const choices = [];
+      root.querySelectorAll('.answer .r0, .answer .r1').forEach(block => {
+        const input = block.querySelector('input[type="radio"], input[type="checkbox"]');
+        const text = block.querySelector('.flex-fill')?.innerText.trim() || block.innerText.trim();
+        choices.push({ text, input });
       });
 
-      let allSuccess = true;
+      if (choices.length < 2) return;
+      const isMulti = root.querySelectorAll('input[type="checkbox"]').length >= 2;
+      out.push({ root, qText, choices, isMulti, isReview });
+    });
+    return out;
+  }
 
-      for (let q of qDataList) {
-        try {
-          const indices = await AIProviders.ask(q.qText, q.choices.map(c => c.text), q.isMulti);
+  async function solveQuestion(q, answerWait) {
+    let indices;
+    try {
+      indices = await AIProviders.ask(q.qText, q.choices.map(c => c.text), q.isMulti);
+    } catch (e) {
+      console.error(LOG, 'AI error:', e.message);
+      return false;
+    }
+    if (!indices || indices.length === 0) return false;
 
-          if (!indices || indices.length === 0) {
-            allSuccess = false;
-            continue;
-          }
-
-          indices.forEach(idx => {
-            if (q.choices[idx] && q.choices[idx].input) {
-              const input = q.choices[idx].input;
-              input.click();
-              input.dispatchEvent(new Event('change', { bubbles: true }));
-              input.checked = true;
-            }
-          });
-
-          q.success = true;
-
-          if (!q.isReview) {
-            await new Promise(r => setTimeout(r, ANSWER_WAIT));
-          } else {
-            await new Promise(r => setTimeout(r, 1500));
-          }
-
-        } catch (e) {
-          console.error('AI Error:', e);
-          allSuccess = false;
-        }
+    indices.forEach(idx => {
+      const choice = q.choices[idx];
+      if (choice && choice.input) {
+        choice.input.click();
+        choice.input.dispatchEvent(new Event('change', { bubbles: true }));
+        choice.input.checked = true;
       }
+    });
 
-      const isSubmitted = document.querySelector('.state')?.innerText.includes('Correct')
-        || document.querySelector('.state')?.innerText.includes('Incorrect')
-        || document.querySelector('.state')?.innerText.includes('Đúng')
-        || document.querySelector('.state')?.innerText.includes('Sai');
+    await new Promise(r => setTimeout(r, q.isReview ? 1500 : answerWait));
+    return true;
+  }
 
-      if (!isSubmitted) {
-        if (!allSuccess) {
-          console.warn('Hủy Next: Lỗi AI hoặc không tìm thấy đáp án.');
-          return;
-        }
+  function allRadioGroupsAnswered() {
+    const groups = new Set();
+    document.querySelectorAll('.que input[type="radio"]').forEach(i => { if (i.name) groups.add(i.name); });
+    for (const name of groups) {
+      const group = document.querySelectorAll(
+        '.que input[type="radio"][name="' + CSS.escape(name) + '"]'
+      );
+      if (!Array.from(group).some(i => i.checked)) return false;
+    }
+    return true;
+  }
 
-        const allQuestions = document.querySelectorAll('.que');
-        let allAnswered = true;
-        for (let q of allQuestions) {
-          if (q.querySelectorAll('input[type="radio"]:checked, input[type="checkbox"]:checked').length === 0) {
-            allAnswered = false;
-            break;
-          }
-        }
+  async function solvePage() {
+    const questions = collectQuestions();
+    if (questions.length === 0) return;
 
-        if (!allAnswered) {
-          console.warn('Hủy Next: Phát hiện câu hỏi chưa có đáp án được chọn.');
-          return;
-        }
-
-        await new Promise(r => setTimeout(r, NEXT_WAIT));
-
-        const nextBtn = document.querySelector('input[name="next"]');
-        if (nextBtn) {
-          nextBtn.click();
-          nextBtn.dispatchEvent(new Event('click', { bubbles: true }));
-        }
-      }
+    const { answer, next } = await getDelays();
+    let allOk = true;
+    for (const q of questions) {
+      const ok = await solveQuestion(q, answer);
+      if (!ok) allOk = false;
     }
 
-    setTimeout(solvePage, 2000);
+    const submitted = /Correct|Incorrect|Đúng|Sai/.test(
+      document.querySelector('.state')?.innerText || ''
+    );
+    if (submitted) return;
+    if (!allOk) { console.warn(LOG, 'Skip Next: AI error'); return; }
+    if (!allRadioGroupsAnswered()) { console.warn(LOG, 'Skip Next: unanswered'); return; }
+
+    await new Promise(r => setTimeout(r, next));
+    const nextBtn = document.querySelector('input[name="next"]');
+    if (nextBtn) {
+      nextBtn.click();
+      nextBtn.dispatchEvent(new Event('click', { bubbles: true }));
+    }
   }
+
+  isDisabled(location.hostname, function (disabled) {
+    if (disabled) { console.info(LOG, 'disabled on', location.hostname); return; }
+    setTimeout(solvePage, 2000);
+  });
 })();
