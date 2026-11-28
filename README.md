@@ -103,4 +103,4 @@ Phiên bản **v3.4.0** mở rộng phạm vi hoạt động từ các nền t�
 2. Điền thông tin cấu hình:
    * **Provider (Nhà cung cấp):** Chọn `Google Gemini`
    * **API Key:** Dán đoạn Key vừa sao chép vào
-   * **Model recommended:** `gemini-2.5-flash
+   * **Model recommended:** `gemini-3.1-flash-lite
